@@ -36,7 +36,20 @@ class Job:
             
         self.save_params()
                
-    def fuse_registered_movie(self, n_buf, n_shift, files=None, save=False, n_proc=4):
+    def fuse_registered_movie(self, n_shift, n_buf, files=None, save=False, n_proc=4):
+        '''
+        Fuse the strips of the stitched tiff together, interpolating at the borders
+
+        Args:
+            n_shift (int): number of pixels of overlap (how many pixels on the right border of strip 1 are repeated on the left border of strip 2, ignoring the black pixels between the strips)
+            n_buf (int): number of black pixels between strips
+            files (list, optional): List of file paths for registered binaries. Defaults to None, which means all   registered binaries in the job.
+            save (bool, optional): Whether to save results in registered_fused_data in the jobdir. Defaults to False.
+            n_proc (int, optional): Number of processors. Each processor loads a whole file, so be mindful of ram. Defaults to 4.
+
+        Returns:
+            fused_files: A list of filepaths is save=True, a concatenated, fused movie if save=False
+        '''
         if files is None:
             files = self.get_registered_files()
         __, xs = lbmio.load_and_stitch_full_tif_mp(self.tifs[0], channels=n.arange(1), get_roi_start_pix=True)
@@ -46,7 +59,7 @@ class Job:
             reg_fused_dir = self.make_new_dir('registered_fused_data')
         else: reg_fused_dir = ''
         with Pool(n_proc) as p:
-            fused_files = p.starmap(fuse_and_save_reg_file, [(file, reg_fused_dir, centers,  shift_xs, n_buf, n_shift, None, None, save) for file in files])
+            fused_files = p.starmap(fuse_and_save_reg_file, [(file, reg_fused_dir, centers,  shift_xs, n_shift, n_buf, None, None, save) for file in files])
         if not save:
             fused_files = n.concatenate(fused_files, axis=1)
         return fused_files

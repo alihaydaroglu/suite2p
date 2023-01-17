@@ -201,6 +201,104 @@ def subtract_crosstalk_worker(shmem_params, coeff, deep_plane_idx, shallow_plane
 
 
 def register_dataset(tifs, params, dirs, summary, log_cb = default_log,
+                    start_batch_idx = 0):
+
+    ref_img_3d = summary['ref_img_3d']
+    crosstalk_coeff = summary['crosstalk_coeff']
+    refs_and_masks = summary.get('refs_and_masks', None)
+    all_ops = summary.get('all_ops',None)
+    job_iter_dir = dirs['iters']
+    job_reg_data_dir = dirs['registered_data']
+    n_tifs_to_analyze = params['total_tifs_to_analyze']
+    tif_batch_size = params['tif_batch_size']
+    planes = params['planes']
+    notch_filt = params['notch_filt']
+    do_subtract_crosstalk = params['subtract_crosstalk']
+    mov_dtype = params['dtype']
+
+    batches = init_batches(tifs, tif_batch_size, n_tifs_to_analyze)
+    n_batches = len(batches)
+    log_cb("Will analyze %d tifs in %d batches" % (len(n.concatenate(batches)), len(batches)),0)
+
+    # init accumulators
+    nz, ny, nx = ref_img_3d.shape
+    example_arr = ref_img_3d
+    shmem_sum_img, shmem_sum_img_params, sum_img = utils.create_shmem_from_arr(example_arr)
+    shmem_mean_img, shmem_mean_img_params, mean_img = utils.create_shmem_from_arr(example_arr.astype(mov_dtype))
+    shmem_max_img,shmem_max_img_params, max_img = utils.create_shmem_from_arr(example_arr)
+    n_frames_proc = 0
+    
+    batch_dirs, reg_data_paths = init_batch_files(job_iter_dir, job_reg_data_dir, n_batches)
+
+    loaded_movs = [0]
+
+    def io_thread_loader(tifs, batch_idx):
+        log_cb("   [Thread] Loading batch %d \n" % batch_idx, 20)
+        loaded_mov = lbmio.load_and_stitch_tifs(tifs, planes, filt = notch_filt, concat=True, log_cb=log_cb)
+        log_cb("   [Thread] Loaded batch %d \n" % batch_idx, 20)
+        loaded_movs[0] = loaded_mov
+        
+        log_cb("   [Thread] Thread for batch %d ready to join \n" % batch_idx, 20)
+    log_cb("Launching IO thread")
+    io_thread = threading.Thread(target=io_thread_loader, args=(batches[start_batch_idx], start_batch_idx))
+    io_thread.start()
+
+    for batch_idx in range(start_batch_idx, n_batches):
+        try:
+            log_cb("Start Batch: ", level=3,log_mem_usage=True )
+            iter_dir = batch_dirs[batch_idx]
+            reg_data_path = reg_data_paths[batch_idx]
+            log_cb("Loading Batch %d of %d" % (batch_idx+1, n_batches), 0)
+            io_thread.join()
+            log_cb("Batch %d IO thread joined" % (batch_idx))
+            log_cb('After IO thread join', level=3,log_mem_usage=True )
+            shmem_mov,shmem_mov_params, mov = utils.create_shmem_from_arr(loaded_movs[0], copy=True)
+            log_cb("After Sharr creation:", level=3,log_mem_usage=True )
+            if batch_idx + 1 < n_batches:
+                log_cb("Launching IO thread for next batch")
+                io_thread = threading.Thread(target=io_thread_loader, args=(batches[batch_idx+1], batch_idx+1))
+                io_thread.start()
+                log_cb("After IO thread launch:", level=3,log_mem_usage=True )
+            if do_subtract_crosstalk:
+                __ = subtract_crosstalk(shmem_mov_params, crosstalk_coeff, planes = planes, log_cb = log_cb)
+            log_cb("Registering Batch %d" % batch_idx, 1)
+            
+            log_cb("Before Reg:", level=3,log_mem_usage=True )
+            all_offsets = register_mov(mov,refs_and_masks, all_ops, log_cb)
+            
+            log_cb("After reg:", level=3,log_mem_usage=True )
+
+            n.save(os.path.join(iter_dir, 'all_offsets.npy'), all_offsets)
+
+            nz, nt, ny, nx = mov.shape
+            n_frames_proc_new = n_frames_proc + nt
+            
+            sum_img_batch = mov.sum(axis=1)
+            mean_img_batch = sum_img_batch / nt
+            max_img_batch = mov.max(axis=1)
+            max_img = n.max([max_img, max_img_batch], axis=0)
+            sum_img += sum_img_batch
+            mean_img = mean_img * (n_frames_proc / n_frames_proc_new) + mean_img_batch * (nt / n_frames_proc_new)
+            n_frames_proc = n_frames_proc_new
+
+            log_cb("Iteration complete, saving mean/max images to %s" % iter_dir,1)
+            n.save(os.path.join(iter_dir, 'max_img.npy'), max_img)
+            n.save(os.path.join(iter_dir, 'mean_img.npy'), mean_img)
+            n.save(os.path.join(iter_dir, 'sum_img.npy'), sum_img)
+            del sum_img_batch
+            del mean_img_batch
+            del max_img_batch
+            n_cleared = gc.collect()
+            log_cb("Garbage collected %d items" %n_cleared, 2)
+            log_cb("After gc collect: ", level=3,log_mem_usage=True )
+        except Exception as exc:
+            log_cb("Error occured in iteration %d" % batch_idx, 0 )
+            tb = traceback.format_exc()
+            log_cb(tb, 0)
+            break
+
+
+def register_dataset_old(tifs, params, dirs, summary, log_cb = default_log,
                     override_input_reg_bins=None, save_output=True, n_proc_detection=10,
                     mem_profile=False, mem_profile_save_dir=None, debug_on_ones=False, do_detection=False, start_batch_idx = 0):
     if not save_output:
@@ -269,8 +367,6 @@ def register_dataset(tifs, params, dirs, summary, log_cb = default_log,
     shmem_sum_img, shmem_sum_img_params, sum_img = utils.create_shmem_from_arr(example_arr)
     shmem_mean_img, shmem_mean_img_params, mean_img = utils.create_shmem_from_arr(example_arr.astype(mov_dtype))
     shmem_max_img,shmem_max_img_params, max_img = utils.create_shmem_from_arr(example_arr)
-    shmem_vmap2,shmem_vmap2_params, vmap2 = utils.create_shmem_from_arr(example_arr.astype(mov_dtype))
-    shmem_sdmov2,shmem_sdmov2_params, sdmov2 = utils.create_shmem_from_arr(example_arr.astype(mov_dtype))
     n_frames_proc = 0
     
     batch_dirs, reg_data_paths = init_batch_files(job_iter_dir, job_reg_data_dir, n_batches)
@@ -460,6 +556,7 @@ def register_dataset(tifs, params, dirs, summary, log_cb = default_log,
         output['mallocs'] = mallocs
         output['malloc_labels'] = malloc_labels
         n.save(os.path.join(mem_profile_save_dir, 'mem_profile_out.npy'), output)
+
 
     # return output
 
