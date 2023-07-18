@@ -7,7 +7,8 @@ import zarr
 import time
 from scipy import ndimage
 
-def default_log(string, val=None): print(string)
+def default_log(string, *args, **kwargs): 
+    print(string)
 
 
 def block_and_svd(mov_reg, n_comp, block_shape= (1, 128, 128), block_overlaps=(0, 18, 18),
@@ -445,7 +446,7 @@ def rechunk_usv_comps(u, s, v, comp_chunksize=16, z_chunksize=None, t_chunksize=
         v = v.rechunk(tuple(cs))
     return u, s, v
 
-def reconstruct_movie_batch(stack_block_dirs, svs, t_indices, vol_shape, block_limits, us=None):
+def reconstruct_movie_batch(stack_block_dirs, svs, t_indices, vol_shape, block_limits, us=None, log_cb=default_log):
     block_shape = tuple(n.diff(block_limits[:,0])[:,0])
     block_overlaps = tuple([int(n.median(block_shape[i] - n.diff(n.unique(block_limits[i,:,0]))))\
                             for i in range(3)])
@@ -453,11 +454,15 @@ def reconstruct_movie_batch(stack_block_dirs, svs, t_indices, vol_shape, block_l
     n_block, n_comp, n_pix = svs.shape
 
     len(stack_block_dirs)
-    if us is None: us = load_stack_us(stack_block_dirs, n_comp=n_comp, t_indices=t_indices, compute=True)
+    if us is None: 
+        us = load_stack_us(stack_block_dirs, n_comp=n_comp, t_indices=t_indices, compute=True)
+        log_cb("Loaded Us", 3)
+
     mask = get_overlap_mask(block_shape, block_overlaps)
     mov_out = n.zeros((nt,) + vol_shape, dtype=n.float32)
     norm = n.zeros(vol_shape, dtype=n.float32)
     for i in range(n_block):
+        if i % 25 == 0: log_cb("Reconstructing block %d" % i, 4)
         zz,yy,xx = block_limits[:,i]
         mov_out[:, zz[0]:zz[1], yy[0]:yy[1], xx[0]:xx[1]] += mask * (us[i] @ svs[i]).reshape(nt, *block_shape)
         norm[zz[0]:zz[1], yy[0]:yy[1], xx[0]:xx[1]] += mask
