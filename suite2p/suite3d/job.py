@@ -6,9 +6,11 @@ from cmath import log
 import datetime
 import os
 import copy
+import sys
 import numpy as n
 import itertools
 from multiprocessing import Pool
+import shutil
 from matplotlib import pyplot as plt
 from skimage.io import imread
 from . import init_pass
@@ -72,10 +74,14 @@ class Job:
             
             vm = psutil.virtual_memory()
             sm = psutil.swap_memory()
-            total = sm.used + vm.used
+
+            vm_avail = vm.available
+            vm_unavail = vm.total - vm_avail
+
+            total = sm.used + vm_unavail
             string = "{:<20}".format(string)
-            string += ("Total Used: %07.3f GB, Virtual: %07.3f GB, Swap: %07.3f" %
-                       ((total/(1024**3), vm.used/(1024**3), sm.used/(1024**3))))
+            string += ("Total Used: %07.3f GB, Virtual Available: %07.3f GB, Virtual Used: %07.3f GB, Swap Used: %07.3f GB" %
+                       ((total/(1024**3), vm_avail/(1024**3),  vm_unavail / (1024**3), sm.used/(1024**3))))
             
         if level <= self.verbosity:
             # print('xxx')
@@ -283,8 +289,7 @@ class Job:
         if svd_info is not None:
             mov = svd_info
             self.log("Using SVD shortcut, loading entire V matrix to memory")
-            out = calculate_corrmap_from_svd(svd_info, params=self.params, log_cb=self.log, iter_limit=iter_limit, svs=svs, us=us, dirs = self.dirs,
-                                            iter_dir_tag=iter_dir_tag, mov_sub_dir_tag=mov_sub_dir_tag)
+            out = calculate_corrmap_from_svd(svd_info, params=self.params, log_cb=self.log, iter_limit=iter_limit, svs=svs, us=us, dirs = self.dirs, iter_dir_tag=iter_dir_tag, mov_sub_dir_tag=mov_sub_dir_tag)
         else:
             if mov is None:
                 mov = self.get_registered_movie('registered_fused_data', 'fused')
@@ -296,8 +301,8 @@ class Job:
                 self.log("Cropped movie to shape: %s" % str(mov.shape))
             out =  calculate_corrmap(mov, self.params, self.dirs, self.log, return_mov_filt=return_mov_filt, save=save,
                                     iter_limit=iter_limit, iter_dir_tag=iter_dir_tag, mov_sub_dir_tag=mov_sub_dir_tag)
-
-        return out 
+        
+        return out, mov_sub_dir, iter_dir
 
     def patch_and_detect(self, corrmap_dir_tag='', do_patch_idxs=None, compute_npil_masks=True, ts=(), combined_name='combined'):
         connector = '-' if len(corrmap_dir_tag) > 0 else ''
@@ -733,7 +738,7 @@ class Job:
 
     def sweep_params(self, params_to_sweep,svd_info=None, mov=None, testing_dir_tag='sweep', 
                              n_test_iters = 1, all_combinations=True, do_vmap=True, svs=None,us=None,
-                             test_parent_dir = None):
+                             test_parent_dir = None, delete_mov_sub = True):
         init_params = copy.deepcopy(self.params)
         testing_dir = self.make_new_dir(testing_dir_tag, parent_dir_name=test_parent_dir)
         sweep_summary_path = os.path.join(testing_dir, 'sweep_summary.npy')
@@ -793,12 +798,17 @@ class Job:
             for comb_idx in range(n_combs):
                 comb_dir_tag = comb_dir_tags[comb_idx]; comb_dir = comb_dirs[comb_idx]
                 comb_str = comb_strs[comb_idx]; 
-                self.log("Running combination %02d/%02d" % (comb_idx + 1, n_combs), 0)
+                self.log("Running combination %02d/%02d" % (comb_idx + 1, n_combs), 0, log_mem_usage=True)
+                self.log("Summary dict size: %02d GB" % (sys.getsizeof(sweep_summary)/1024**3))
                 self.log("Combination params: %s" % comb_str, 2) 
                 self.log("Saving to tag %s at %s" % (comb_dir_tag,comb_dir), 2) 
                 self.params = comb_params[comb_idx]
-                vmap, mean_img, max_img  = self.calculate_corr_map(mov=mov, svd_info=svd_info, parent_dir = comb_dir_tag,
+                (vmap, mean_img, max_img), mov_sub_dir, iter_dir = \
+                                            self.calculate_corr_map(mov=mov, svd_info=svd_info, parent_dir = comb_dir_tag,
                                             iter_limit=n_test_iters, update_main_params=False, svs=svs, us=us)
+                if delete_mov_sub:
+                    self.log("Removing mov_sub from %s" % mov_sub_dir)
+                    shutil.rmtree(mov_sub_dir)
                 vmaps.append(vmap)
                 sweep_summary['vmaps'] = vmaps
                 sweep_summary['mean_img'] = mean_img
