@@ -30,7 +30,7 @@ params = {
     'init_file_pool' : None,
     # 'even' or 'random' sampling of init files
     'init_file_sample_method' : 'even',
-    # number of random frames to select from initial files
+    # number of random frames to select from initial files, set None for all
     'init_n_frames' : None,
     # make sure the mean image is all positive (add the offsets)
     'enforce_positivity' : True,
