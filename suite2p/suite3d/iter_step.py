@@ -101,7 +101,7 @@ def calculate_corrmap_from_svd(svd_info, params,dirs, log_cb, iter_limit=None, i
             log_cb("Using provided U, cropped to %s" % (str(usx.shape)),3)
         else: usx = None
         movx = svu.reconstruct_movie_batch(svd_info['svd_dirs'], svs, (st_idx, end_idx),
-                                     vol_shape, svd_info['blocks'], us = usx)
+                                     vol_shape, svd_info['blocks'], us = usx, log_cb = log_cb)
         log_cb("Reconstructed in %.2f seconds" % (time.time() - recon_tic), 2)
 
         log_cb("Calculating corr map",2); corrmap_tic = time.time()
@@ -620,7 +620,9 @@ def register_dataset(tifs, params, dirs, summary, log_cb = default_log,
                 file_idx += 1
             n.save(offset_path, all_offsets)
             log_cb("After reg:", level=3,log_mem_usage=True )
-
+            
+            shmem_mov.close(); shmem_mov.unlink()
+            log_cb("After close + unlink shmem:", level=3,log_mem_usage=True )
             nz, nt, ny, nx = mov.shape
             n_frames_proc_new = n_frames_proc + nt
 
