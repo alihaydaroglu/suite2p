@@ -234,8 +234,9 @@ def slider_callback(v, sliders, ranges, iscell_path, iscell_save_path, values, o
         if rng[1] == ranges[i][1]: rng[1] = values[i].max()
         valid = get_valid_cells(values[i], rng)
         iscell_out[:,0] = n.logical_and(iscell_out[:,0], valid)
+        iscell_out[:,1] = iscell_out[:,0]
     n.save(iscell_save_path, iscell_out)
-    print("%d cells valid" % iscell_out[:,0].sum())
+    print("%d, %d cells valid" % (iscell_out[:,0].sum(),iscell_out[:,1].sum() ))
     update_vols(outputs['stats'], outputs['vmap'].shape, iscell_out, 
                 layers, update_layers=True)
 
