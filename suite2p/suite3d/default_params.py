@@ -14,7 +14,7 @@ params = {
     # (the ScanImage channel mappings are corrected)
     'planes': n.arange(0, 30),
     # If you have less than 30 planes or you don't want to correct the channel mappings, set to False
-    'convert_plane_ids_to_channel_ids' : False,
+    'convert_plane_ids_to_channel_ids' : True,
 
 
     ### File I/O ### 
