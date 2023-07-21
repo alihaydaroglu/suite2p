@@ -648,10 +648,11 @@ class Job:
             fused_files = n.concatenate(fused_files, axis=1)
         return fused_files
 
-    def svd_decompose_movie(self, svd_dir_tag, run_svd=True, end_batch=None):
+    def svd_decompose_movie(self, svd_dir_tag, run_svd=True, end_batch=None, mov=None):
         svd_dir = self.dirs[svd_dir_tag]
         self.save_params(copy_dir=svd_dir_tag)
-        mov = self.get_registered_movie('registered_fused_data','fused')
+        if mov is None:
+            mov = self.get_registered_movie('registered_fused_data','fused')
         if self.params.get('svd_crop', None) is not None:
             crop = self.params['svd_crop']
             mov = mov[crop[0][0]:crop[0][1], :,crop[1][0]:crop[1][1], crop[2][0]:crop[2][1]]
