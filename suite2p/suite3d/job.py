@@ -132,12 +132,14 @@ class Job:
         gamma_fit_img = os.path.join(crosstalk_dir, 'gamma_fit.png')
         plane_fits_img = os.path.join(crosstalk_dir, 'plane_fits.png')
 
-        im = imread(plane_fits_img)
-        f2,ax = plt.subplots(figsize=(im.shape[0] // 200, im.shape[1] // 200), dpi=400);
-        ax.imshow(im); ax.set_axis_off()
-        im = imread(gamma_fit_img)
-        f3,ax = plt.subplots(figsize=(im.shape[0] // 200, im.shape[1] // 200), dpi=150);
-        ax.imshow(im); ax.set_axis_off()
+        if os.path.isfile(plane_fits_img):
+            im = imread(plane_fits_img)
+            f2,ax = plt.subplots(figsize=(im.shape[0] // 200, im.shape[1] // 200), dpi=400);
+            ax.imshow(im); ax.set_axis_off()
+        if os.path.isfile(gamme_fit_img):
+            im = imread(gamma_fit_img)
+            f3,ax = plt.subplots(figsize=(im.shape[0] // 200, im.shape[1] // 200), dpi=150);
+            ax.imshow(im); ax.set_axis_off()
 
                 
 
