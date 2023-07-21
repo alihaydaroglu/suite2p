@@ -29,8 +29,8 @@ def choose_init_tifs(tifs, n_init_files, init_file_pool_lims=None, method='even'
 
     return sample_tifs
 
-def load_init_tifs(init_tifs, planes, filter_params):
-    full_mov = lbmio.load_and_stitch_tifs(init_tifs, planes = planes, 
+def load_init_tifs(init_tifs, planes, filter_params, convert_plane_ids_to_channel_ids=True):
+    full_mov = lbmio.load_and_stitch_tifs(init_tifs, planes = planes, convert_plane_ids_to_channel_ids=convert_plane_ids_to_channel_ids,
                                         filt=filter_params, concat=False)
 
     mov_lens = [mov.shape[1] for mov in full_mov]
@@ -101,7 +101,8 @@ def run_init_pass(job):
     init_tifs = choose_init_tifs(tifs, params['n_init_files'], params['init_file_pool'], 
                                        params['init_file_sample_method'])
     init_mov = load_init_tifs(
-        init_tifs, params['planes'], params['notch_filt'])
+        init_tifs, params['planes'], params['notch_filt'], 
+        convert_plane_ids_to_channel_ids = params.get('convert_plane_ids_to_channel_ids', True))
     nz, nt, ny, nx = init_mov.shape
     if params['init_n_frames'] is not None:
         assert nt > params['init_n_frames'], 'not enough frames in loaded tifs'

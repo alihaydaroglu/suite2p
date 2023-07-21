@@ -580,6 +580,7 @@ def register_dataset(tifs, params, dirs, summary, log_cb = default_log,
     enforce_positivity = params.get('enforce_positivity', False)
     mov_dtype = params['dtype']
     split_tif_size = params.get('split_tif_size', None)
+    convert_plane_ids_to_channel_ids = params.get('convert_plane_ids_to_channel_ids', True)
 
     batches = init_batches(tifs, tif_batch_size, n_tifs_to_analyze)
     n_batches = len(batches)
@@ -598,7 +599,8 @@ def register_dataset(tifs, params, dirs, summary, log_cb = default_log,
 
     def io_thread_loader(tifs, batch_idx):
         log_cb("   [Thread] Loading batch %d \n" % batch_idx, 20)
-        loaded_mov = lbmio.load_and_stitch_tifs(tifs, planes, filt = notch_filt, concat=True, log_cb=log_cb)
+        loaded_mov = lbmio.load_and_stitch_tifs(tifs, planes, filt = notch_filt, concat=True,
+                                                convert_plane_ids_to_channel_ids=convert_plane_ids_to_channel_ids, log_cb=log_cb)
         log_cb("   [Thread] Loaded batch %d \n" % batch_idx, 20)
         loaded_movs[0] = loaded_mov
         

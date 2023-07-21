@@ -40,6 +40,8 @@ def load_and_stitch_tifs(paths, planes, verbose=True,n_proc=15, mp_args = {}, fi
 
     if convert_plane_ids_to_channel_ids:
         channels = lbm_plane_to_ch[n.array(planes)]
+    else:
+        channels = n.array(planes)
     if filt is not None:
         filt = get_filter(filt)
 
