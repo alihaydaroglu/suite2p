@@ -291,6 +291,7 @@ class Job:
         if svd_info is not None:
             mov = svd_info
             self.log("Using SVD shortcut, loading entire V matrix to memory")
+            self.log("WARNING: if you encounter very large RAM usage during this run, use mov=svd_info instead of svd_info=svd_info. If it persists, reduce your batchsizes")
             out = calculate_corrmap_from_svd(svd_info, params=self.params, log_cb=self.log, iter_limit=iter_limit, svs=svs, us=us, dirs = self.dirs, iter_dir_tag=iter_dir_tag, mov_sub_dir_tag=mov_sub_dir_tag)
         else:
             if mov is None:
