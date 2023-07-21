@@ -219,6 +219,7 @@ def calculate_corrmap(mov, params, dirs, log_cb = default_log, save=True, return
     n_frames_proc = 0 
     if iter_limit is not None:
         log_cb("Running only %d iters" % iter_limit)
+        n_batches = min(iter_limit, n_batches)
     for batch_idx in range(n_batches):
         if iter_limit is not None and batch_idx == iter_limit:
             break
@@ -228,7 +229,7 @@ def calculate_corrmap(mov, params, dirs, log_cb = default_log, save=True, return
         n_frames_proc += end_idx - st_idx
         if reconstruct_svd:
             recon_tic = time.time()
-            log_cb("Reconstructing from svd", 3)
+            log_cb("Reconstructing from svd (re-loading spatial components each iteration)", 3)
             movx = svu.reconstruct_overlapping_movie(svd_info, t_indices = (st_idx, end_idx),n_comps=n_comps, crop_z = crop)
             log_cb("Reconstructed in %.2f seconds" % (time.time() - recon_tic),3 )
         else:
