@@ -304,7 +304,7 @@ class Job:
             out =  calculate_corrmap(mov, self.params, self.dirs, self.log, return_mov_filt=return_mov_filt, save=save,
                                     iter_limit=iter_limit, iter_dir_tag=iter_dir_tag, mov_sub_dir_tag=mov_sub_dir_tag)
         
-        return out, mov_sub_dir, iter_dir
+        return out, mov_sub_dir, job.dirs[iter_dir_tag]
 
     def patch_and_detect(self, corrmap_dir_tag='', do_patch_idxs=None, compute_npil_masks=True, ts=(), combined_name='combined'):
         connector = '-' if len(corrmap_dir_tag) > 0 else ''
