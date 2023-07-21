@@ -586,9 +586,10 @@ class Job:
         return traces
         
 
-    def get_registered_files(self, key='registered_data', filename_filter='reg_data'):
+    def get_registered_files(self, key='registered_data', filename_filter='reg_data', sort=True):
         all_files = os.listdir(self.dirs[key])
         reg_files = [os.path.join(self.dirs[key],x) for x in all_files if x.startswith(filename_filter)]
+        if sort: reg_files = list(n.sort(reg_files))
         return reg_files
     def get_denoised_files(self):
         all_files = n.os.listdir(self.dirs['deepinterp'])
