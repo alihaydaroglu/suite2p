@@ -40,6 +40,26 @@ def init_batches(tifs, batch_size, max_tifs_to_analyze=None):
     return batches
 
 
+def minimal_corrmap(mov, ):
+    pass
+    # movx = mov[n.newaxis].copy().swapaxes(0,1).astype(n.float32)
+    # nt,nz,ny,nx = movx.shape
+    # # mov_hpf = detu.hp_rolling_mean_filter(movx, hpf_width)
+    # # sdmov2 = det3d.standard_deviation_over_time(mov_hpf, nt, sqrt=False)
+    # mov_hpf = n.zeros_like(movx)
+    # for i in range(0, nt, hpf_width):
+    #     mov_hpf[i:i+hpf_width] = movx[i:i+hpf_width] - movx[i:i+hpf_width].mean(axis=0)
+    # sdmov = (((n.diff(mov_hpf, axis=0) ** 2).sum(axis=0)) / nt)**0.5
+
+    # norm_mov = mov_hpf.copy() / (sdmov ** sdnorm_exp)
+    # c1 = np_filt(n.ones((nz,ny,nx)), np_size[1:], mode='constant')
+    # c2 = cv_filt(n.ones((nz,ny,nx)), cv_size[1:], mode='constant')
+    # np_mov = npfilt(norm_mov, np_size, mode='constant') / c1
+    # np_sub_mov = norm_mov - np_mov
+    # cv_mov = cvfilt(np_sub_mov, (cv_size), mode='constant') * cv_size[-1]
+    # vmap = ((cv_mov ** 2) * (cv_mov > int_thresh).astype(int)).sum(axis=0) ** 0.5
+
+
 
 def calculate_corrmap_from_svd(svd_info, params,dirs, log_cb, iter_limit=None, iter_dir_tag='iters', mov_sub_dir_tag='mov_sub', svs=None, us=None):
     t_batch_size = params['t_batch_size']
@@ -51,6 +71,8 @@ def calculate_corrmap_from_svd(svd_info, params,dirs, log_cb, iter_limit=None, i
     do_sdnorm = params.get('do_sdnorm', 'True')
     n_proc_corr = params['n_proc_corr']
     mproc_batchsize = params['mproc_batchsize']
+    sdnorm_exp= params.get('sdnorm_exp', 1.0)
+
     if mproc_batchsize is None: mproc_batchsize = n.ceil(t_batch_size / n_proc_corr)
 
     npil_filt_size = (params['npil_filt_z'], params['npil_filt_xy'], params['npil_filt_xy'])
@@ -58,6 +80,7 @@ def calculate_corrmap_from_svd(svd_info, params,dirs, log_cb, iter_limit=None, i
 
     log_cb("Using conv_filt: %s, %.2f, %.2f" % (params['conv_filt_type'], params['conv_filt_z'], params['conv_filt_xy']), 1)
     log_cb("Using np_filt: %s, %.2f, %.2f" % (params['npil_filt_type'], params['npil_filt_z'], params['npil_filt_xy']), 1)
+    log_cb("Using normalization exponent of %.2f" % (sdnorm_exp,), 1)
 
     nz, nt, ny, nx = svd_info['mov_shape']
     vol_shape = (nz,ny,nx)
@@ -107,7 +130,7 @@ def calculate_corrmap_from_svd(svd_info, params,dirs, log_cb, iter_limit=None, i
         log_cb("Calculating corr map",2); corrmap_tic = time.time()
         mov_filt = calculate_corrmap_for_batch(movx, sdmov2, vmap2, mean_img, max_img, temporal_hpf, npil_filt_size, unif_filt_size, params['intensity_thresh'],
                                     n_frames_proc, n_proc_corr, mproc_batchsize, mov_sub_save_path=mov_sub_paths[batch_idx],
-                                    do_sdnorm=do_sdnorm,log_cb=log_cb, return_mov_filt=False, fix_vmap_edges=fix_vmap_edges,
+                                    do_sdnorm=do_sdnorm,log_cb=log_cb, return_mov_filt=False, fix_vmap_edges=fix_vmap_edges, sdnorm_exp=sdnorm_exp,
                                                conv_filt_type=params['conv_filt_type'], np_filt_type=params['npil_filt_type'], dtype=n.float32)
         log_cb("Calculated corr map in %.2f seconds" % (time.time() - corrmap_tic), 2)
     
@@ -147,6 +170,7 @@ def calculate_corrmap(mov, params, dirs, log_cb = default_log, save=True, return
     dtype = params['dtype']
     n_proc_corr = params['n_proc_corr']
     mproc_batchsize = params['mproc_batchsize']
+    sdnorm_exp= params.get('sdnorm_exp', 1.0)
     if mproc_batchsize is None: mproc_batchsize = n.ceil(t_batch_size / n_proc_corr)
 
 
@@ -222,7 +246,7 @@ def calculate_corrmap(mov, params, dirs, log_cb = default_log, save=True, return
         log_cb("Calculating corr map",2); tic = time.time()
         mov_filt = calculate_corrmap_for_batch(movx, sdmov2, vmap2, mean_img, max_img, temporal_hpf, npil_filt_size, unif_filt_size, intensity_thresh,
                                     n_frames_proc, n_proc_corr, mproc_batchsize, mov_sub_save_path=mov_sub_paths[batch_idx],do_sdnorm=do_sdnorm,
-                                    log_cb=log_cb, return_mov_filt=return_mov_filt, fix_vmap_edges=fix_vmap_edges,
+                                    log_cb=log_cb, return_mov_filt=return_mov_filt, fix_vmap_edges=fix_vmap_edges, sdnorm_exp=sdnorm_exp,
                                                conv_filt_type=conv_filt_type, np_filt_type=npil_filt_type, dtype=dtype)
         log_cb("Calculated corr map in %.2f seconds" % (time.time() - tic))
         if save:
@@ -243,7 +267,7 @@ def calculate_corrmap(mov, params, dirs, log_cb = default_log, save=True, return
 
 
     
-def calculate_corrmap_for_batch(mov, sdmov2, vmap2, mean_img, max_img, temporal_hpf, npil_filt_size, unif_filt_size, intensity_thresh, n_frames_proc=0,n_proc=12, mproc_batchsize = 50, mov_sub_save_path=None, log_cb=default_log, return_mov_filt=False, do_sdnorm=True, np_filt_type='unif', conv_filt_type = 'unif' , fix_vmap_edges=True, dtype=None):
+def calculate_corrmap_for_batch(mov, sdmov2, vmap2, mean_img, max_img, temporal_hpf, npil_filt_size, unif_filt_size, intensity_thresh, n_frames_proc=0,n_proc=12, mproc_batchsize = 50, mov_sub_save_path=None, log_cb=default_log, return_mov_filt=False, do_sdnorm=True, np_filt_type='unif', conv_filt_type = 'unif' , sdnorm_exp = 1.0, fix_vmap_edges=True, dtype=None):
     if dtype is None: dtype = n.float32
     nt, nz, ny, nx = mov.shape
     log_cb("Rolling mean filter", 3)
@@ -264,6 +288,9 @@ def calculate_corrmap_for_batch(mov, sdmov2, vmap2, mean_img, max_img, temporal_
     else:
         log_cb("Skipping sdnorm", 3)
         sdmov = 1
+    if sdnorm_exp != 1.0:
+        sdmov = sdmov ** sdnorm_exp
+
     mov[:] = mov[:] / sdmov
     if return_mov_filt:
         sdnorm_mov = mov.copy()

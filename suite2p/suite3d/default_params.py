@@ -111,6 +111,10 @@ params = {
 
     # number of svd components to use in reconstruction
     'n_svd_comp': 400,
+    # strength of normalization, 1.0 is standard. reduce below 1.0 (to ~0.8) if you see bright
+    # blood vessels etc. in the correlation map
+    'sdnorm_exp' : 1.0,
+
     # Type (gaussian, uniform) and xy/z extents of neuropil filter
     'npil_filt_type' : 'gaussian',
     'npil_filt_xy' : 5.0,

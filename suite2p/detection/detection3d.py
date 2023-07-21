@@ -41,7 +41,7 @@ def standard_deviation_over_time(mov: np.ndarray, batch_size: int,sqrt=True, das
     for ix in range(0, nbins, batch_size):
         sdmov += ((np.diff(mov[ix:ix+batch_size], axis=0) ** 2).sum(axis=0))
     if sqrt: 
-        sdmov = np.maximum(1e-10, np.sqrt(sdmov / nbins))
+        sdmov = np.sqrt(np.maximum(1e-10, (sdmov / nbins)))
     return sdmov
 
 # def npsub_worker(filt_size, mode, c1):
@@ -217,7 +217,6 @@ def np_sub_and_conv3d_split_shmem(shmem_sub, shmem_filt, np_filt_size, conv_filt
 
     if conv_filt_type == 'unif' : conv_filt = uniform_filter
     elif conv_filt_type == 'gaussian' : conv_filt = gaussian_filter
-
 
     c1 = np_filt(n.ones((Lz, Ly, Lx)), np_filt_size, mode='constant')
     c2 = conv_filt(n.ones((Lz, Ly, Lx)), conv_filt_size, mode='constant')
