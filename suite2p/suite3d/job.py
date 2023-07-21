@@ -596,11 +596,15 @@ class Job:
         reg_files = [os.path.join(self.dirs['deepinterp'],x) for x in all_files if x.startswith('dp')]
         return reg_files
 
-    def get_iter_dirs(self, dir_tag = 'iters'):
+    def get_iter_dirs(self, dir_tag = 'iters', sort=True):
         iters_dir = self.dirs[dir_tag]
         iter_dirs = [os.path.join(iters_dir, dir) for dir in os.listdir(iters_dir)]
+        if sort: iter_dirs = sorted(iter_dirs)
         ret = []
+        # print(iter_dirs)
+        # return iter_dirs
         for dir in iter_dirs:
+            # print(os.listdir(dir))
             if 'vmap.npy' in os.listdir(dir) or 'vmap2.npy' in os.listdir(dir):
                 ret.append(dir)
         return ret
