@@ -732,7 +732,7 @@ class Job:
                 nframes.append(size_to_frames[tifsize])
             else:
                 tf = tifffile.TiffFile(tif)
-                nf = len(tf.pages) // 30
+                nf = len(tf.pages) // self.params.get('n_ch_tif', 30)
                 nframes.append(nf)
                 size_to_frames[tifsize] = nf
                 self.log(tif +  ' is %d frames and %d bytes' % (nf, tifsize))
