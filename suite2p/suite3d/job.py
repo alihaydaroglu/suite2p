@@ -136,7 +136,7 @@ class Job:
             im = imread(plane_fits_img)
             f2,ax = plt.subplots(figsize=(im.shape[0] // 200, im.shape[1] // 200), dpi=400);
             ax.imshow(im); ax.set_axis_off()
-        if os.path.isfile(gamme_fit_img):
+        if os.path.isfile(gamma_fit_img):
             im = imread(gamma_fit_img)
             f3,ax = plt.subplots(figsize=(im.shape[0] // 200, im.shape[1] // 200), dpi=150);
             ax.imshow(im); ax.set_axis_off()
@@ -724,7 +724,7 @@ class Job:
         nframes = []
         jobids = []
         for tif in self.tifs:
-            jobids.append(int(tif.split('\\')[-2]))
+            jobids.append(int(tif.split(os.path.sep)[-2]))
             tifsize = int(os.path.getsize(tif))
             if tifsize in size_to_frames.keys():
                 nframes.append(size_to_frames[tifsize])
