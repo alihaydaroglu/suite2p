@@ -1,7 +1,5 @@
 
-from cmath import log
 import os
-from turtle import ht
 import numpy as n
 import copy
 from multiprocessing import shared_memory, Pool
@@ -580,6 +578,7 @@ def register_dataset(tifs, params, dirs, summary, log_cb = default_log,
     enforce_positivity = params.get('enforce_positivity', False)
     mov_dtype = params['dtype']
     split_tif_size = params.get('split_tif_size', None)
+    n_ch_tif = params.get('n_ch_tif', 30)
     convert_plane_ids_to_channel_ids = params.get('convert_plane_ids_to_channel_ids', True)
 
     batches = init_batches(tifs, tif_batch_size, n_tifs_to_analyze)
@@ -599,7 +598,7 @@ def register_dataset(tifs, params, dirs, summary, log_cb = default_log,
 
     def io_thread_loader(tifs, batch_idx):
         log_cb("   [Thread] Loading batch %d \n" % batch_idx, 20)
-        loaded_mov = lbmio.load_and_stitch_tifs(tifs, planes, filt = notch_filt, concat=True,
+        loaded_mov = lbmio.load_and_stitch_tifs(tifs, planes, filt = notch_filt, concat=True,n_ch=n_ch_tif,
                                                 convert_plane_ids_to_channel_ids=convert_plane_ids_to_channel_ids, log_cb=log_cb)
         log_cb("   [Thread] Loaded batch %d \n" % batch_idx, 20)
         loaded_movs[0] = loaded_mov

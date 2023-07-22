@@ -305,7 +305,7 @@ class Job:
             out =  calculate_corrmap(mov, self.params, self.dirs, self.log, return_mov_filt=return_mov_filt, save=save,
                                     iter_limit=iter_limit, iter_dir_tag=iter_dir_tag, mov_sub_dir_tag=mov_sub_dir_tag)
         
-        return out, mov_sub_dir, job.dirs[iter_dir_tag]
+        return out, mov_sub_dir, self.dirs[iter_dir_tag]
 
     def patch_and_detect(self, corrmap_dir_tag='', do_patch_idxs=None, compute_npil_masks=True, ts=(), combined_name='combined'):
         connector = '-' if len(corrmap_dir_tag) > 0 else ''
@@ -532,18 +532,20 @@ class Job:
             iscell = n.load(os.path.join(patch_dir, 'iscell.npy'))
         except FileNotFoundError:
             iscell = n.ones((len(stats), 2), dtype=int)
-            n.save(os.path.join(patch_dir, 'iscell.npy'))
+            n.save(os.path.join(patch_dir, 'iscell.npy'), iscell)
         return stats, info, iscell
 
     def combine_patches(self, patch_idxs, combined_name, info_use_idx = -1, save=True,
-                        extra_stats_keys = [], parent_dir_tag = 'detection'):
+                        extra_stats_keys = None, parent_dir_tag = 'detection'):
 
-        if save: combined_dir = self.make_new_dir(combined_name, parent_dir_name=parent_dir_tag,
+        if save:
+            combined_dir = self.make_new_dir(combined_name, parent_dir_name=parent_dir_tag,
                                                   dir_tag = parent_dir_tag + '-' + combined_name)
         stats = []
         iscells = []
         keep_stats_keys = ['idx','threshold', 'coords', 'lam','med','peak_val', 'npcoords']
-        keep_stats_keys += extra_stats_keys
+        if extra_stats_keys is not None:
+            keep_stats_keys += extra_stats_keys
 
         for patch_idx in patch_idxs:
             stats_patch, info_patch, iscell = self.load_patch_results(patch_idx, parent_dir_tag)

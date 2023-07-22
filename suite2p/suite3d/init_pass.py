@@ -29,9 +29,9 @@ def choose_init_tifs(tifs, n_init_files, init_file_pool_lims=None, method='even'
 
     return sample_tifs
 
-def load_init_tifs(init_tifs, planes, filter_params, convert_plane_ids_to_channel_ids=True):
+def load_init_tifs(init_tifs, planes, filter_params, n_ch_tif = 30, convert_plane_ids_to_channel_ids=True):
     full_mov = lbmio.load_and_stitch_tifs(init_tifs, planes = planes, convert_plane_ids_to_channel_ids=convert_plane_ids_to_channel_ids,
-                                        filt=filter_params, concat=False)
+                                          n_ch = n_ch_tif, filt=filter_params, concat=False)
 
     mov_lens = [mov.shape[1] for mov in full_mov]
     full_mov = n.concatenate(full_mov, axis=1)
@@ -100,8 +100,10 @@ def run_init_pass(job):
 
     init_tifs = choose_init_tifs(tifs, params['n_init_files'], params['init_file_pool'], 
                                        params['init_file_sample_method'])
+    n_ch_tif = job.params.get('n_ch_tif', 30)
     init_mov = load_init_tifs(
         init_tifs, params['planes'], params['notch_filt'], 
+        n_ch_tif = n_ch_tif,
         convert_plane_ids_to_channel_ids = params.get('convert_plane_ids_to_channel_ids', True))
     nz, nt, ny, nx = init_mov.shape
     if params['init_n_frames'] is not None:

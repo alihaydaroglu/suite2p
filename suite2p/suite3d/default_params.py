@@ -15,6 +15,7 @@ params = {
     'planes': n.arange(0, 30),
     # If you have less than 30 planes or you don't want to correct the channel mappings, set to False
     'convert_plane_ids_to_channel_ids' : True,
+    'n_ch_tif' : 30, # number of channels in the recording
 
 
     ### File I/O ### 
@@ -111,8 +112,7 @@ params = {
 
     ### Correlation Map ###
 
-    # number of svd components to use in reconstruction
-    'n_svd_comp': 400,
+    # number of svd components to use in reconstruction is n_svd_comp
     # strength of normalization, 1.0 is standard. reduce below 1.0 (to ~0.8) if you see bright
     # blood vessels etc. in the correlation map
     'sdnorm_exp' : 1.0,
@@ -184,7 +184,7 @@ params = {
     'dcnv_sig_baseline' : 10,
     'dcnv_prctile_baseline' : 8,
     'dcnv_batchsize' : 3000,
-    'tau' : 1.3,
+    # 'tau' : 1.3,
 
     # Legacy
     'subjects_dir' : None,

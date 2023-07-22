@@ -15,8 +15,7 @@ def default_log(string, val=None): print(string)
 lbm_plane_to_ch = n.array([1,5,6,7,8,9,2,10,11,12,13,14,15,16,17,3,18,19,20,21,22,23,4,24,25,26,27,28,29,30])-1
 lbm_ch_to_plane = n.array(n.argsort(lbm_plane_to_ch))
 
-def load_and_stitch_tifs(paths, planes, verbose=True,n_proc=15, mp_args = {}, filt=None, concat=True,
-                         convert_plane_ids_to_channel_ids = True, log_cb=default_log, debug=False):
+def load_and_stitch_tifs(paths, planes, verbose=True,n_proc=15, mp_args = {}, filt=None, concat=True, n_ch=30, convert_plane_ids_to_channel_ids = True, log_cb=default_log, debug=False):
     '''
     Load tifs into memory
 
@@ -36,19 +35,19 @@ def load_and_stitch_tifs(paths, planes, verbose=True,n_proc=15, mp_args = {}, fi
         _type_: _description_
     '''
     
-
-
-    if convert_plane_ids_to_channel_ids:
+    if n_ch == 30 and convert_plane_ids_to_channel_ids:
         channels = lbm_plane_to_ch[n.array(planes)]
     else:
         channels = n.array(planes)
+        if convert_plane_ids_to_channel_ids:
+            log_cb("Less than 30 channels specified, not converting plane ids to channel ids")
     if filt is not None:
         filt = get_filter(filt)
 
     mov_list = []
     for tif_path in paths:
         if verbose: log_cb("Loading %s" % tif_path, 2)
-        im, px, py = load_and_stitch_full_tif_mp(tif_path, channels=channels, verbose=False, filt=filt, n_proc=n_proc,debug=debug, **mp_args)
+        im, px, py = load_and_stitch_full_tif_mp(tif_path, channels=channels, verbose=False, filt=filt, n_ch = n_ch, n_proc=n_proc,debug=debug, **mp_args)
         mov_list.append(im)
     if concat:
         mov = n.concatenate(mov_list,axis=1)
@@ -60,14 +59,14 @@ def load_and_stitch_tifs(paths, planes, verbose=True,n_proc=15, mp_args = {}, fi
     return mov
 
 
-def load_and_stitch_full_tif_mp(path, channels, n_proc=10, verbose=True,translations=None, filt = None, debug=False, get_roi_start_pix=False):
+def load_and_stitch_full_tif_mp(path, channels, n_proc=10, verbose=True,n_ch = 30,
+                                translations=None, filt = None, debug=False, get_roi_start_pix=False):
     tic = time.time()
-    n_ch_overwrite=30
     # TODO imread from tifffile has an overhead of ~20-30 seconds before it actually reads the file?
     tiffile = tifffile.imread(path)
     if len(tiffile.shape) < 4:
         n_t_ch, n1, n2 = tiffile.shape
-        tiffile = tiffile.reshape(int(n_t_ch/30.0), 30, n1,n2)
+        tiffile = tiffile.reshape(int(n_t_ch/n_ch), n_ch, n1,n2)
   
     rois = get_meso_rois(path)
     # print("XXXXXX %.2f" % (tiffile.nbytes / 1024**3))
