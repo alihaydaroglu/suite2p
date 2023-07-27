@@ -118,6 +118,7 @@ def phasecorr(data, cfRefImg, maxregshift, smooth_sigma_time, convolve_method='o
     return ymax, xmax, cmax.astype(np.float32)
 
 
+from scipy.ndimage import shift
 def shift_frame(frame: np.ndarray, dy: int, dx: int) -> np.ndarray:
     """
     Returns frame, shifted by dy and dx
@@ -136,4 +137,5 @@ def shift_frame(frame: np.ndarray, dy: int, dx: int) -> np.ndarray:
         The shifted frame
 
     """
-    return np.roll(frame, (-dy, -dx), axis=(0, 1))
+    return shift(frame, (-dy, -dx))
+    # return np.roll(frame, (-dy, -dx), axis=(0, 1))
