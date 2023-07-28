@@ -137,5 +137,5 @@ def shift_frame(frame: np.ndarray, dy: int, dx: int) -> np.ndarray:
         The shifted frame
 
     """
-    return shift(frame, (-dy, -dx))
+    return shift(frame, (-dy, -dx), order=0)
     # return np.roll(frame, (-dy, -dx), axis=(0, 1))
