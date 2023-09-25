@@ -1,1 +1,0 @@
-name = 'suite3d'
